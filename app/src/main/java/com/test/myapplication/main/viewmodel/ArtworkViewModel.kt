@@ -1,11 +1,14 @@
 package com.test.myapplication.main.viewmodel
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
+import androidx.lifecycle.AndroidViewModel
 import com.test.myapplication.repository.ArtworkRepository
 import com.test.myapplication.main.model.Artwork
+import com.test.myapplication.utility.Utils
 import kotlinx.coroutines.Dispatchers
 
 class ArtworkViewModel() : ViewModel() {
@@ -13,7 +16,7 @@ class ArtworkViewModel() : ViewModel() {
     val artworks: State<List<Artwork>> = _artworks
     private val _loading = mutableStateOf(true)
     val loading: State<Boolean> = _loading
-    private val repository = ArtworkRepository()
+    var repository = ArtworkRepository()
     init {
         fetchData()
     }
@@ -29,6 +32,5 @@ class ArtworkViewModel() : ViewModel() {
                 _loading.value = false
             }
         }
-
     }
 }

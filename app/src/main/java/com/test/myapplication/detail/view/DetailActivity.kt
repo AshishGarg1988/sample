@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,21 +21,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import com.test.myapplication.detail.viewmodel.ArtworkDetailViewModel
+import com.test.myapplication.utility.Utils
 
 class DetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         // Retrieve the artworkId from the intent
+        val networkUtils = Utils(this)
         val artworkId = intent.getIntExtra("artworkId", -1)
         val viewModel: ArtworkDetailViewModel by lazy {
             ViewModelProvider(this).get(ArtworkDetailViewModel::class.java)
@@ -45,7 +45,7 @@ class DetailActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ){
-                ArtworkDetails(viewModel)
+                ArtworkDetails(viewModel, networkUtils)
             }
 
         }
@@ -55,7 +55,7 @@ class DetailActivity : ComponentActivity() {
 }
 
 @Composable
-fun ArtworkDetails(artworkviemodel: ArtworkDetailViewModel) {
+fun ArtworkDetails(artworkviemodel: ArtworkDetailViewModel, networkUtils: Utils) {
 
     if (artworkviemodel.loading.value) {
         Box(
@@ -77,25 +77,53 @@ fun ArtworkDetails(artworkviemodel: ArtworkDetailViewModel) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = artworkviemodel.artworkTitle.value ?: "No title available",
-                style = MaterialTheme.typography.headlineMedium
-            )
+            if(networkUtils.isNetworkAvailable()){
+                Text(
+                    text = artworkviemodel.artworkTitle.value ?: "No title available",
+                    style = MaterialTheme.typography.headlineMedium
+                )
 
-            Text(
-                text = htmlToPlainText(artworkviemodel.artworkdesc.value),
-                style = TextStyle(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Blue
-                ),
-                modifier = Modifier
-                    .padding(16.dp)
-                    .background(Color.LightGray)
-                    .padding(8.dp)
-            )
+                Text(
+                    text = htmlToPlainText(artworkviemodel.artist_display.value),
+                    modifier = Modifier
+                        .padding(6.dp)
+                )
+                ScrollableText(
+                    text = htmlToPlainText(artworkviemodel.artworkdesc.value ?: "No Description Available Now")
+                )
+            }else{
+                Text(
+                    text = "No Network available",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            }
+
         }
 
+    }
+}
+
+@Composable
+fun ScrollableText(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier
+) {
+    // You can adjust the verticalScroll modifier as needed
+    Column(
+        modifier = modifier
+            .padding(16.dp)
+            .background(Color.LightGray)
+            .padding(8.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = text,
+            style = TextStyle(
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Blue
+            )
+        )
     }
 }
 

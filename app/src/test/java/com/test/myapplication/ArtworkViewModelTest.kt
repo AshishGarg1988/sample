@@ -1,76 +1,56 @@
 package com.test.myapplication
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.Observer
-import com.test.myapplication.api.ArticApiService
 import com.test.myapplication.main.model.Artwork
 import com.test.myapplication.main.model.ArtworksResponse
 import com.test.myapplication.main.viewmodel.ArtworkViewModel
-import io.mockk.*
+import com.test.myapplication.repository.ArtworkRepository
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.mockito.Mockito.mock
 
 @ExperimentalCoroutinesApi
 class ArtworkViewModelTest {
 
-    // Rule to ensure LiveData updates instantly on the same thread
-    @get:Rule
-    val rule = InstantTaskExecutorRule()
-
-    // Set up a coroutine rule for testing suspending functions
-    @get:Rule
-    val coroutineRule = MainCoroutineRule()
-
-    // Mocks
-    private lateinit var apiService: ArticApiService
-    private lateinit var viewModel: ArtworkViewModel
-
-    // Observers for testing LiveData updates
-    private lateinit var artworksObserver: Observer<List<Artwork>>
+    private val testDispatcher = TestCoroutineDispatcher()
 
     @Before
     fun setup() {
-        apiService = mockk(relaxed = true)
-        viewModel = ArtworkViewModel(apiService)
-
-        artworksObserver = spyk(Observer { })
+        Dispatchers.setMain(testDispatcher)
     }
 
     @After
     fun tearDown() {
-        // No need to remove observer since we're not using observeForever
+        Dispatchers.resetMain()
+        testDispatcher.cleanupTestCoroutines()
     }
 
     @Test
-    fun `fetchData success updates artworks`() = runBlockingTest {
-        // Arrange
-        val mockArtworks = listOf(Artwork(1, "Artwork 1"), Artwork(2, "Artwork 2"))
-        val mockResponse = ArtworksResponse(mockArtworks)
-        coEvery { apiService.getArtworks() } returns mockResponse
+    fun `fetchData should update artworks and loading states`() {
+        // Given
+        val mockRepository = mockk<ArtworkRepository>()
 
-        // Act
+        // Mocking the behavior of the repository
+        coEvery { mockRepository.getArtworks() } returns ArtworksResponse(listOf(Artwork(1, "Title")))
+
+        val viewModel = ArtworkViewModel()
+
+        // Mocking the repository inside the ViewModel
+        viewModel.repository = mockRepository
+
+        // When
         viewModel.fetchData()
 
-        // Assert
-        coVerify { apiService.getArtworks() }
-        verify { artworksObserver wasNot Called }
-    }
-
-    @Test
-    fun `fetchData error handles gracefully`() = runBlockingTest {
-        // Arrange
-        coEvery { apiService.getArtworks() } throws Exception("Fake error")
-
-        // Act
-        viewModel.fetchData()
-
-        // Assert
-        coVerify { apiService.getArtworks() }
-        verify { artworksObserver wasNot Called }
-        // Additional error handling assertions if needed
+        // Then
+        assertEquals(viewModel.artworks.value.size, 1)
+        assertEquals(viewModel.loading.value, false)
     }
 }
